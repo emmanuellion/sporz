@@ -5,6 +5,7 @@ import random
 import datetime
 import time
 import math
+from collections import Counter
 
 print("Démarrage ...")
 client = discord.Client()
@@ -15,7 +16,7 @@ bot.remove_command("help")
 cascade_mere = ['player', 'compo', 'vote']
 body = {
     "roles": {
-        "list_player": {},
+        "list_player": [],
         "total_player": 0,
         "nb_now": 0
     },
@@ -28,6 +29,8 @@ body = {
 list_msg_bvn = ['Bienvenue à bord de la station ', "Bienvenue à bord mais n'oublie pas de te méfier des autres ",
                 'Ici on est là pour écraser des mutants ', 'Direction le tableau de bord ']
 switch_choice_compo = 1
+list_roles = ['hacker', 'mutant', 'medecin', 'informaticien', 'psychologue', 'espion', 'astro', 'fanatique',
+              'geneticien']
 
 
 # renvoie le contenu du fichier json
@@ -43,8 +46,39 @@ def push(load):
         json.dump(load, f, ensure_ascii=False, indent=4)
 
 
-def assignment(ctx):
-    pass
+def assignment():
+    load = get()
+    list_member_done = []
+    list_member = list(load['player'].keys())
+    print(list_member)
+    for rol in load['compo']:
+        print(f"Rôle {rol}")
+        for nb_player in range(load['roles'][rol]['total_player']):
+            member = random.choice(list_member)
+            print(f"Premier choix de joueur : {member}")
+            while member in list_member_done:
+                member = random.choice(list_member)
+            print(f"Choix final de joueur : {member}")
+            load['player'][member]['role'] = rol
+            load['roles'][rol]['list_player'].append(member)
+            load['compo'][rol].append(member)
+            list_member_done.append(member)
+    print(f"list_member : {list_member}")
+    print(f"list_member_done : {list_member_done}")
+    if Counter(list_member) != Counter(list_member_done):
+        load['compo']['astro'] = []
+        load['roles']['total_roles'] += 1
+        while Counter(list_member) != Counter(list_member_done):
+            member = random.choice(list_member)
+            while member in list_member_done:
+                member = random.choice(list_member)
+            load['player'][member]['role'] = "astro"
+            load['roles']['astro']['list_player'].append(member)
+            load['compo']['astro'].append(member)
+            load['roles']['astro']['total_player'] += 1
+            list_member_done.append(member)
+    print(load)
+    return load
 
 
 # crée un channel pour un certain rôle
@@ -64,6 +98,74 @@ async def timeout(ctx):
     for member in ctx.channel.members:
         print(member)
         await ctx.channel.set_permissions(member, read_messages=True, send_messages=False)
+
+
+async def hub_reaction(payload):
+    global switch_choice_compo
+    load = get()
+    if payload.user_id != 803364581954158702:
+        if load['game']['id_choice'] == payload.message_id:
+            if switch_choice_compo % 2 != 0:
+                if payload.emoji.name == "hacker":
+                    load['roles'][payload.emoji.name]['total_player'] += 1
+                elif payload.emoji.name == "geneticien":
+                    load['roles'][payload.emoji.name]['total_player'] += 1
+                elif payload.emoji.name == "fanatique":
+                    load['roles'][payload.emoji.name]['total_player'] += 1
+                elif payload.emoji.name == "astro":
+                    load['roles'][payload.emoji.name]['total_player'] += 1
+                elif payload.emoji.name == "espion":
+                    load['roles'][payload.emoji.name]['total_player'] += 1
+                elif payload.emoji.name == "medecin":
+                    load['roles'][payload.emoji.name]['total_player'] += 1
+                elif payload.emoji.name == "mutant":
+                    load['roles'][payload.emoji.name]['total_player'] += 1
+                elif payload.emoji.name == "psychologue":
+                    load['roles'][payload.emoji.name]['total_player'] += 1
+                elif payload.emoji.name == "informaticien":
+                    load['roles'][payload.emoji.name]['total_player'] += 1
+                if payload.emoji.name in list_roles:
+                    load['roles']['total_roles'] += 1
+            else:
+                if payload.emoji.name == "hacker":
+                    if load['roles'][payload.emoji.name]['total_player'] - 1 >= 0:
+                        load['roles'][payload.emoji.name]['total_player'] -= 1
+                elif payload.emoji.name == "geneticien":
+                    if load['roles'][payload.emoji.name]['total_player'] - 1 >= 0:
+                        load['roles'][payload.emoji.name]['total_player'] -= 1
+                elif payload.emoji.name == "fanatique":
+                    if load['roles'][payload.emoji.name]['total_player'] - 1 >= 0:
+                        load['roles'][payload.emoji.name]['total_player'] -= 1
+                elif payload.emoji.name == "astro":
+                    if load['roles'][payload.emoji.name]['total_player'] - 1 >= 0:
+                        load['roles'][payload.emoji.name]['total_player'] -= 1
+                elif payload.emoji.name == "espion":
+                    if load['roles'][payload.emoji.name]['total_player'] - 1 >= 0:
+                        load['roles'][payload.emoji.name]['total_player'] -= 1
+                elif payload.emoji.name == "medecin":
+                    if load['roles'][payload.emoji.name]['total_player'] - 1 >= 0:
+                        load['roles'][payload.emoji.name]['total_player'] -= 1
+                elif payload.emoji.name == "mutant":
+                    if load['roles'][payload.emoji.name]['total_player'] - 1 >= 0:
+                        load['roles'][payload.emoji.name]['total_player'] -= 1
+                elif payload.emoji.name == "psychologue":
+                    if load['roles'][payload.emoji.name]['total_player'] - 1 >= 0:
+                        load['roles'][payload.emoji.name]['total_player'] -= 1
+                elif payload.emoji.name == "informaticien":
+                    if load['roles'][payload.emoji.name]['total_player'] - 1 >= 0:
+                        load['roles'][payload.emoji.name]['total_player'] -= 1
+                if payload.emoji.name in list_roles:
+                    if load['roles']['total_roles'] - 1 >= 0:
+                        load['roles']['total_roles'] -= 1
+            push(load)
+            msg = await bot.get_guild(payload.guild_id).get_channel(payload.channel_id).fetch_message(
+                payload.message_id)
+            embed = discord.Embed(title="Liste des rôles", description="", color=0x6F00F6)
+            for rol in load['compo']:
+                embed.add_field(name=f"{rol} :", value=load['roles'][rol]['total_player'], inline=False)
+            await msg.edit(embed=embed)
+        if payload.emoji.name == "👽":
+            switch_choice_compo += 1
 
 
 # évènement de connexion du bot
@@ -86,112 +188,12 @@ async def on_member_join(member):
 
 @bot.event
 async def on_raw_reaction_add(payload):
-    global switch_choice_compo
-    load = get()
-    if payload.user_id != 803364581954158702:
-        if load['game']['id_choice'] == payload.message_id:
-            if switch_choice_compo % 2 != 0:
-                if payload.emoji.name == "hacker":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "geneticien":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "fanatique":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "astro":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "espion":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "medecin":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "mutant":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "psychologue":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "informaticien":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-            else:
-                if payload.emoji.name == "hacker":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "geneticien":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "fanatique":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "astro":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "espion":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "medecin":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "mutant":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "psychologue":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "informaticien":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-            push(load)
-            msg = await bot.get_guild(payload.guild_id).get_channel(payload.channel_id).fetch_message(
-                payload.message_id)
-            embed = discord.Embed(title="Liste des rôles", description="", color=0x6F00F6)
-            for rol in load['compo']:
-                embed.add_field(name=f"{rol} :", value=load['roles'][rol]['total_player'], inline=False)
-            await msg.edit(embed=embed)
-        if payload.emoji.name == "👽":
-            switch_choice_compo += 1
+    await hub_reaction(payload)
 
 
 @bot.event
 async def on_raw_reaction_remove(payload):
-    global switch_choice_compo
-    load = get()
-    if payload.user_id != 803364581954158702:
-        if load['game']['id_choice'] == payload.message_id:
-            if switch_choice_compo % 2 != 0:
-                if payload.emoji.name == "hacker":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "geneticien":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "fanatique":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "astro":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "espion":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "medecin":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "mutant":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "psychologue":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-                elif payload.emoji.name == "informaticien":
-                    load['roles'][payload.emoji.name]['total_player'] += 1
-            else:
-                if payload.emoji.name == "hacker":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "geneticien":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "fanatique":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "astro":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "espion":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "medecin":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "mutant":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "psychologue":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-                elif payload.emoji.name == "informaticien":
-                    load['roles'][payload.emoji.name]['total_player'] -= 1
-            push(load)
-            msg = await bot.get_guild(payload.guild_id).get_channel(payload.channel_id).fetch_message(
-                payload.message_id)
-            embed = discord.Embed(title="Liste des rôles", description="", color=0x6F00F6)
-            for rol in load['compo']:
-                embed.add_field(name=f"{rol} :", value=load['roles'][rol]['total_player'], inline=False)
-            await msg.edit(embed=embed)
-        if payload.emoji.name == "👽":
-            switch_choice_compo += 1
+    await hub_reaction(payload)
 
 
 @bot.command()
@@ -204,7 +206,7 @@ async def help(ctx):
     embed.add_field(name="/add", value="Ajoute un rôle à la composition", inline=False)
     embed.add_field(name="/role", value="Affiche la liste des rôles dans la composition", inline=False)
     embed.add_field(name="/remove", value="Enlève un rôle de la composition", inline=False)
-    embed.add_field(name="/make_compo", value="Panneau de contrôle pour le nombre de rôles dans la composition",
+    embed.add_field(name="/compo", value="Panneau de contrôle pour le nombre de rôles dans la composition",
                     inline=False)
     embed.add_field(name="/start", value="Commence le jeu", inline=False)
     embed.add_field(name="/restart", value="Réinitialise les salons et le fichier json", inline=False)
@@ -264,14 +266,14 @@ async def add(ctx, arg=None):
     if arg is not None:
         load = get()
         if arg in load['roles']:
-            load['compo'][arg] = {}
+            load['compo'][arg] = []
             push(load)
             await ctx.send("Le rôle a bien été ajouté à la composition")
         else:
             await ctx.send("Ce rôle n'existe pas, voici la liste des rôles existant =>")
             embed = discord.Embed(title="Liste des rôles", description="", color=0x6F00F6)
-            for rol in load['roles']:
-                embed.add_field(name=f"{rol}", value="⇧", inline=True)
+            for rol in list_roles:
+                embed.add_field(name=rol, value="⇧", inline=True)
             await ctx.send(embed=embed)
     else:
         await ctx.send("Veuillez fournir en paramètre le nom du rôle à inclure dans la composition")
@@ -308,13 +310,14 @@ async def remove(ctx, arg=None):
                     embed.add_field(name=f"{rol}", value="⇧", inline=True)
                 await ctx.send(embed=embed)
         else:
-            await ctx.send("La composition actuelle est vide, veuillez la remplire avant d'enlever des rôles")
+            await ctx.send("La composition actuelle est vide, veuillez la remplire avant d'enlever des rôles via la "
+                           "commande `/add <role>`")
     else:
         await ctx.send("Veuillez fournir en paramètre le nom du rôle à exclure de la composition")
 
 
 @bot.command()
-async def make_compo(ctx):
+async def compo(ctx):
     load = get()
     if load['compo'] != {}:
         embed = discord.Embed(title="Liste des rôles", description="", color=0x6F00F6)
@@ -332,35 +335,51 @@ async def make_compo(ctx):
                 await msg.add_reaction(emojis)
         await msg.add_reaction("👽")
     else:
-        await ctx.send("Veuillez d'abord rajouter des rôles dans la composition")
+        await ctx.send("Veuillez d'abord rajouter des rôles dans la composition via la commande `/add <role>`")
 
 
 # commence la partie
 @bot.command()
 async def start(ctx):
     load = get()
-    if load['game']['nb_player'] >= 4:
-        for cat in ctx.guild.categories:
-            if cat == "🎮👽vaisseau-de-jeu":
-                break
-        await ctx.guild.create_text_channel('💻🎮Ordinateur-de-bord', category=cat)
-        assignment(ctx)
-        load['game']['game_started'] = True
-        push(load)
-        await ctx.send("Le jeu commence !")
+    if not load['game']['game_started']:
+        if load['game']['nb_player'] >= 1:
+            if load['roles']['total_roles'] <= 0:
+                for cat in ctx.guild.categories:
+                    if cat == "🎮👽vaisseau-de-jeu":
+                        break
+                await ctx.guild.create_text_channel('💻🎮Ordinateur-de-bord', category=cat)
+                load = assignment()
+                load['game']['game_started'] = True
+                push(load)
+                await ctx.send("Le jeu commence !")
+            else:
+                await ctx.send("Il n'y a pas assez de rôle, veuillez en ajouter via la commande `/add <role>`")
+        else:
+            await ctx.send("Il n'y a pas assez de joueurs")
     else:
-        await ctx.send("Il n'y a pas assez de joueurs")
+        await ctx.send("Vous ne pouvez pas relancer de partie, une partie est déjà en cours !")
 
 
 # reinitialise le fichier json
 @bot.command()
 async def restart(ctx):
     load = get()
+    for rol in ctx.guild.roles:
+        if rol.name == "joueur":
+            break
+    for player in load['player']:
+        for m in bot.get_guild(871137122126553100).members:
+            t = str(m.name) + "#" + str(m.discriminator)
+            if t == player:
+                await m.remove_roles(rol)
+                break
     for array in cascade_mere:
         load[array] = {}
     for array in body:
         if array == "roles":
-            for rol in load['roles']:
+            load['roles']['total_roles'] = 0
+            for rol in list_roles:
                 load['roles'][rol] = body[array]
         else:
             load[array] = body[array]
@@ -380,9 +399,8 @@ async def cestparti(ctx):
 
 @bot.command()
 async def list_role(ctx):
-    load = get()
     embed = discord.Embed(title="Liste des rôles", description="", color=0x6F00F6)
-    for rol in load['roles']:
+    for rol in list_roles:
         embed.add_field(name=f"{rol}", value="⇧", inline=True)
     await ctx.send(embed=embed)
 
