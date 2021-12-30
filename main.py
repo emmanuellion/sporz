@@ -10,7 +10,7 @@ import asyncio
 print("Démarrage ...")
 client = discord.Client()
 intents = discord.Intents.all()
-token = "ODAzMzY0NTgxOTU0MTU4NzAy.YA8tkg.8vqQ4JU3mpPxNXIeYYXZkWpZ1ro"
+token = ""
 bot = commands.Bot(command_prefix="/", intents=intents)
 bot.remove_command("help")
 cascade_mere = ['player', 'compo', 'list_id_chan']
